@@ -1,7 +1,7 @@
 """
-This script processes data collected from robot simulation experiments.
+This script processes data collected from REAL QUPA robot experiments (SOLE-R).
 It contains functions to clean, transform, and prepare data for subsequent analysis.
-SOLER PROJECT.
+Time variables are assumed to be natively logged in seconds.
 Author: Gabriel Madroñero
 """
 
@@ -20,24 +20,17 @@ import seaborn as sns
 import math
 from matplotlib.patches import Patch
 
-logger = logging.getLogger(__name__)
-
-# === Global parameters (adjust if changed in the controller) ===
-T_TICKS_PER_SEC = 10.0   # Should match T_TICKS_PER_SEC in Lua controller
-W_STD_SEC = 60.0         # w_std from paper (for reference axis)
-W_MIN_SEC = 7.9          # w_min from paper (for reference axis)
-MIN_TIMESTEP = 0         # Adjusted to 0 to capture all new data
-MAX_TIMESTEP = 100000   # Maximum timestep to consider
-
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# === Global parameters for Real Robots ===
+W_STD_SEC = 60.0         # w_std from methodology
+W_MIN_SEC = 7.9          # w_min from methodology
+MIN_TIMESTEP = 0         
+MAX_TIMESTEP = 600       # Real experiment max duration
+
 def thousands_formatter(x, pos):
-    """
-    Formatter to display Y-axis values in thousands (x10^3).
-    Example: 120000 -> 120
-    """
     return f"{x/1000:.1f}"
 
 def load_all_cases(base_dir: str) -> pd.DataFrame:
@@ -49,14 +42,14 @@ def load_all_cases(base_dir: str) -> pd.DataFrame:
     for c_dir in case_dirs:
         csv_file = c_dir / "experiment_data.csv"
         if csv_file.exists():
-            logger.info(f"Loading data for {c_dir.name}...")
+            logger.info(f"Loading real robot data for {c_dir.name}...")
             df = pd.read_csv(csv_file)
             
-            # Estandarizar la columna greedy inmediatamente al cargar
+            # Standardize greedy column
             if 'greedy' in df.columns and df['greedy'].dtype == object:
                 df['greedy'] = df['greedy'].astype(str).str.lower().map({'true': True, 'false': False})
                 
-            df['caso'] = c_dir.name  # Añadimos la columna del caso
+            df['caso'] = c_dir.name
             all_data.append(df)
         else:
             logger.warning(f"File not found: {csv_file}")
@@ -67,48 +60,50 @@ def load_all_cases(base_dir: str) -> pd.DataFrame:
     return pd.concat(all_data, ignore_index=True)
 
 
-class RobotDataProcessor:
-    """Class to process robot simulation experiment data across multiple cases."""
+class RealRobotDataProcessor:
+    """Class to process real robot experiment data across multiple cases."""
     
-    def __init__(self, raw_data: pd.DataFrame, output_dir: str, ticks_per_sec: float = 10.0):
+    def __init__(self, raw_data: pd.DataFrame, output_dir: str):
         self.output_dir = Path(output_dir)
-        self.ticks_per_sec = ticks_per_sec
         self.raw_data = raw_data
         
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.cases = sorted(self.raw_data['caso'].unique())
         
-        # Paleta de colores dinámica dependiendo del número de casos
         palette_colors = sns.color_palette("tab10", len(self.cases))
         self.palette = dict(zip(self.cases, palette_colors))
         
     def preprocess_data(self) -> pd.DataFrame:
         df_clean = self.raw_data.copy()
+
+        logger.info("Filtrando datos exclusivamente para el robot 'qupa_7E'")
+        df_clean = df_clean[df_clean['robot'] == 'qupa_7E']
         
-        logger.info("Filtrando datos exclusivamente para el robot 'q0'")
-        df_clean = df_clean[df_clean['robot'] == 'q0']
+        # Mapeo estandarizado de nomenclatura física a lógica de gráficas
+        if 'task' in df_clean.columns:
+            df_clean['task'] = df_clean['task'].replace({'TYPE_B': 'BLUE', 'TYPE_R': 'RED'})
                 
-        logger.info(f"Filtering data: timestep {MIN_TIMESTEP} to {MAX_TIMESTEP}")
+        logger.info(f"Filtering data: timestep {MIN_TIMESTEP} to {MAX_TIMESTEP} seconds")
         df_clean = df_clean[(df_clean['tick'] >= MIN_TIMESTEP) & (df_clean['tick'] <= MAX_TIMESTEP)]
         
-        df_clean['time_seconds'] = df_clean['tick'] / self.ticks_per_sec
-        df_clean['w_sec'] = df_clean['planned_wticks'] / self.ticks_per_sec
+        # Asignación directa (Los logs de los robots ya están en segundos)
+        df_clean['time_seconds'] = df_clean['tick']
+        df_clean['w_sec'] = df_clean['planned_wticks']
         
         self.raw_data = df_clean
         return df_clean
     
     def print_comparison(self):
         print("\n" + "="*50)
-        print("CASE COMPARISON")
+        print("REAL ROBOTS CASE COMPARISON")
         print("="*50)
         for caso in self.cases:
             df_case = self.raw_data[self.raw_data['caso'] == caso]
             print(f"\n--- {caso} ---")
             print(f"Total tasks: {len(df_case)}")
+            print(f"Active robots: {df_case['robot'].nunique()}")
             if 'p_x' in df_case.columns:
                 print(f"Average p_x: {df_case['p_x'].mean():.3f}")
-            if 'm' in df_case.columns:
-                print(f"Average m: {df_case['m'].mean():.3f}")
             if 'task' in df_case.columns:
                 print(f"Task Split: {df_case['task'].value_counts().to_dict()}")
             if 'w_sec' in df_case.columns:
@@ -127,31 +122,27 @@ class RobotDataProcessor:
                      palette=self.palette, element="step", fill=True, alpha=0.3, ax=ax)
         
         ax.set_xlabel("Task completion time $w_x$ (s)")
-        ax.yaxis.set_major_formatter(FuncFormatter(thousands_formatter))
         ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
-        ax.set_ylabel("Number of tasks completed ($10^3$)")
-        ax.set_title("Comparison of Task Completion Times Across Cases")
+        ax.set_ylabel("Number of tasks completed")
+        ax.set_title("Comparison of Task Completion Times (Real Swarm)")
         ax.axvline(W_MIN_SEC, linestyle="--", color='red', alpha=0.7)
         ax.axvline(W_STD_SEC, linestyle="--", color='blue', alpha=0.7)
         ax.grid(True, alpha=0.3)
 
         plt.tight_layout()
-        if save_dir: plt.savefig(Path(save_dir) / "cases_comparison_histograms.png", dpi=300, bbox_inches='tight')
+        if save_dir: plt.savefig(Path(save_dir) / "real_cases_comparison_histograms.png", dpi=300, bbox_inches='tight')
         plt.show()
 
-    def plot_performance_trend(self, window_sec: int = 300, max_time_sec: int = 10000, save_path: Optional[str] = None) -> None:
-        """Generates a continuous line plot showing tasks completed per time window with shaded variance."""
+    def plot_performance_trend(self, window_sec: int = 60, max_time_sec: int = 600, save_path: Optional[str] = None) -> None:
         if self.raw_data is None or self.raw_data.empty: return
-        logger.info("Generating performance trend plot for cases")
+        logger.info("Generating performance trend plot for real cases")
         
         df_all = self.raw_data.copy()
-        df_all['time_seconds_full'] = df_all['tick'] / self.ticks_per_sec
-        df_all['time_window_full'] = (np.ceil(df_all['time_seconds_full'] / window_sec) * window_sec).astype(int)
+        df_all['time_window_full'] = (np.ceil(df_all['time_seconds'] / window_sec) * window_sec).astype(int)
         global_max_tasks = df_all.groupby(['caso', 'seed', 'time_window_full']).size().max()
         if pd.isna(global_max_tasks): global_max_tasks = 100
 
         df = self.raw_data.copy()
-
         df = df[(df['time_seconds'] >= 0) & (df['time_seconds'] <= max_time_sec)]
         df['time_window'] = (np.ceil(df['time_seconds'] / window_sec) * window_sec).astype(int)
         df = df[(df['time_window'] > 0) & (df['time_window'] <= max_time_sec)]
@@ -159,8 +150,7 @@ class RobotDataProcessor:
         df['experiment_id'] = df.groupby(['caso', 'seed']).ngroup()
         perf = df.groupby(['experiment_id', 'caso', 'time_window']).size().reset_index(name='tasks_completed')
 
-        # Aseguramos que todas las semillas tengan una entrada en todas las ventanas,
-        # asignando 0 tareas si no hicieron ninguna.
+        # Matriz de tiempo completo para rellenar huecos en los datos físicos
         all_windows = np.arange(window_sec, max_time_sec + window_sec, window_sec)
         experiments = df[['experiment_id', 'caso']].drop_duplicates()
         
@@ -171,11 +161,8 @@ class RobotDataProcessor:
         
         grid = grid.merge(experiments, on='experiment_id')
         perf = grid.merge(perf, on=['experiment_id', 'caso', 'time_window'], how='left')
-        
-        # Rellenamos los "huecos" con ceros
         perf['tasks_completed'] = perf['tasks_completed'].fillna(0)
 
-        # Forzar origen en (0,0) para consistencia en el inicio del gráfico
         dummy_data = []
         for exp_id in perf['experiment_id'].unique():
             caso = perf[perf['experiment_id'] == exp_id]['caso'].iloc[0]
@@ -205,13 +192,9 @@ class RobotDataProcessor:
         time_windows = sorted(perf['time_window'].unique())
         step = max(1, len(time_windows) // 12) 
         ax.set_xticks(time_windows[::step])
-        
-        def time_formatter(x, pos):
-            return f"{x/1000:g}" if x != 0 else "0"
-        ax.xaxis.set_major_formatter(FuncFormatter(time_formatter))
 
         ax.set_ylim(0, global_max_tasks * 1.1)
-        ax.set_xlabel("Time (s) [×10³]", fontsize=12)
+        ax.set_xlabel("Time (s)", fontsize=12) # Escala directa en segundos
         ax.set_ylabel("Number of tasks completed", fontsize=12)
         ax.grid(True, linestyle=':', alpha=0.7)
         ax.legend(title="Experimental Case", fontsize=11, loc='upper left')
@@ -220,12 +203,14 @@ class RobotDataProcessor:
         if save_path: plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.show()
 
-    def plot_search_time_distribution(self, max_time_sec: int = 10000, save_path: Optional[str] = None) -> None:
+    def plot_search_time_distribution(self, max_time_sec: int = 600, save_path: Optional[str] = None) -> None:
         if self.raw_data is None or self.raw_data.empty: return
         logger.info("Generating search time distribution plot per case")
         df = self.raw_data.copy()
         df = df[(df['time_seconds'] >= 0) & (df['time_seconds'] <= max_time_sec)]
-        df['search_time_sec'] = df['search_ticks'] / self.ticks_per_sec
+        
+        # Asignación directa en segundos
+        df['search_time_sec'] = df['search_ticks'] 
 
         stats = df.groupby('caso')['search_time_sec'].agg(['mean', 'median', 'std', 'max']).round(2)
 
@@ -244,7 +229,7 @@ class RobotDataProcessor:
             legend=False
         )
 
-        ax.set_title("Spent task search time per Case", fontsize=14, fontweight='bold', pad=15)
+        ax.set_title("Spent task search time per Case (Real Swarm)", fontsize=14, fontweight='bold', pad=15)
         ax.set_ylabel("Search Time (s)", fontsize=12)
         ax.set_xlabel("Case", fontsize=12)
 
@@ -264,9 +249,9 @@ class RobotDataProcessor:
         if save_path: plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.show()
 
-    def plot_f_measure_boxplot(self, window_sec: int = 300, max_time_sec: int = 10000, save_path: Optional[str] = None) -> None:
+    def plot_f_measure_boxplot(self, window_sec: int = 60, max_time_sec: int = 600, save_path: Optional[str] = None) -> None:
         if self.raw_data is None or self.raw_data.empty: return
-        logger.info("Generating F-measure boxplot for cases")
+        logger.info("Generating F-measure boxplot for real cases")
         df = self.raw_data.copy()
         df = df[(df['time_seconds'] >= 0) & (df['time_seconds'] <= max_time_sec)]
         df = df[df['task'].isin(['BLUE', 'RED'])]
@@ -277,6 +262,7 @@ class RobotDataProcessor:
         df['experiment_id'] = df.groupby(['caso', 'seed']).ngroup()
         df = df.sort_values(by=['experiment_id', 'time_window', 'robot', 'tick'])
 
+        # Lógica F-measure calculada individualmente por cada robot en el enjambre
         df['prev_task'] = df.groupby(['experiment_id', 'time_window', 'robot'])['task'].shift(1)
         df['is_switch'] = (df['task'] != df['prev_task']) & (df['prev_task'].notnull())
 
@@ -327,7 +313,7 @@ class RobotDataProcessor:
         new_labels = []
         for i, x in enumerate(labels):
             if i % step == 0:
-                new_labels.append(f"{x/1000:g}" if x != 0 else "0")
+                new_labels.append(f"{x:g}" if x != 0 else "0") # Sin notación x10^3
             else:
                 new_labels.append("")
 
@@ -335,7 +321,7 @@ class RobotDataProcessor:
         ax.set_xticklabels(new_labels, rotation=45 if n_ticks > 15 else 0)
 
         ax.set_ylabel("F-measure (Specialization)", fontsize=12)
-        ax.set_xlabel("Time (s) [×10³]", fontsize=12)
+        ax.set_xlabel("Time (s)", fontsize=12)
         ax.set_ylim(-0.15, 1.15) 
         ax.grid(True, axis='y', linestyle=':', alpha=0.7)
         ax.legend(title="Case", fontsize=11, loc='upper left') 
@@ -344,10 +330,8 @@ class RobotDataProcessor:
         if save_path: plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.show()
 
-# ============================================================================
-# SPECIALIZATION SCATTER PLOT 
-# ============================================================================
-class SpecializationScatterPlotter:
+
+class RealSpecializationScatterPlotter:
     def __init__(self, raw_data: pd.DataFrame):
         self.raw_data = raw_data
         self.robot_stats = None
@@ -356,13 +340,16 @@ class SpecializationScatterPlotter:
 
     def preprocess_data(self) -> pd.DataFrame:
         df = self.raw_data.copy()
-        df = df[df['robot'] == 'q0']
-        
+        df = df[df['robot'] == 'qupa_7E']        
+        if 'task' in df.columns:
+            df['task'] = df['task'].replace({'TYPE_B': 'BLUE', 'TYPE_R': 'RED'})
+            
         df['experiment_id'] = df.groupby(['caso', 'seed']).ngroup()
 
         TASK_TYPES = ['BLUE', 'RED']
         df_tasks = df[df['task'].isin(TASK_TYPES)].copy()
         
+        # Agrupa la ejecución de tareas de todos los robots por experimento
         self.robot_stats = (df_tasks.groupby(['experiment_id', 'caso', 'seed', 'robot', 'task'])
                             .size().unstack(fill_value=0).reset_index())
 
@@ -403,7 +390,7 @@ class SpecializationScatterPlotter:
                            color=self.palette[caso],
                            s=40, alpha=0.8, edgecolors='white', linewidth=0.5, label=caso)
 
-        ax.set_title("Specialization Across All Cases", fontsize=14, fontweight='bold')
+        ax.set_title("Specialization Across Real Cases", fontsize=14, fontweight='bold')
         ax.set_ylabel("Total tasks $\\tau_r$ (Red)", fontsize=12)
         ax.set_xlabel("Total tasks $\\tau_b$ (Blue)", fontsize=12)
         
@@ -418,65 +405,56 @@ class SpecializationScatterPlotter:
 # MAIN EXECUTION
 # ------------------------------------------------------------------
 def main():
-    # UPDATE: Directory containing CASO1, CASO2, etc.
-    base_dir = r"/home/gmadro/EXP_CASOS" 
+    base_dir = r"/home/gmadro/EXP_CASOS/EXP-REALES-CASOS" # Directorio sugerido para aislar datos físicos
+    TARGET_STRATEGY = 'selective'  # Cambia a 'both' (ambas estrategias) 'greedy' o 'selective' según el análisis deseado
     
-    # PARÁMETRO DE FILTRO DE ESTRATEGIA ('both', 'greedy', 'selective')
-    TARGET_STRATEGY = 'greedy'  # Cambia a 'greedy' o 'both' según lo que quieras analizar
-    
-    output_dir = f"/home/gmadro/EXP_CASOS/processing_data_{TARGET_STRATEGY}"
+    output_dir = f"/home/gmadro/EXP_CASOS/EXP-REALES-CASOS/processing_data_{TARGET_STRATEGY}"
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     
     try:
         raw_data = load_all_cases(base_dir)
         
-        logger.info(f"Aplicando filtro de estrategia: {TARGET_STRATEGY.upper()}")
+        logger.info(f"Applying strategy filter: {TARGET_STRATEGY.upper()}")
         if TARGET_STRATEGY == 'greedy':
             raw_data = raw_data[raw_data['greedy'] == True]
         elif TARGET_STRATEGY == 'selective':
             raw_data = raw_data[raw_data['greedy'] == False]
-        elif TARGET_STRATEGY != 'both':
-            logger.warning("Estrategia no reconocida. Usando 'both'.")
             
         if raw_data.empty:
-            logger.error("No hay datos disponibles tras aplicar el filtro.")
+            logger.error("No data available after strategy filter.")
             return
         
-        processor = RobotDataProcessor(raw_data, output_dir)
+        processor = RealRobotDataProcessor(raw_data, output_dir)
         processor.preprocess_data()
         processor.print_comparison()
         
         print("\n" + "="*50)
-        print(f"GENERATING PLOTS & FIGURES (STRATEGY: {TARGET_STRATEGY.upper()})")
+        print(f"GENERATING PLOTS & FIGURES (REAL SWARM - STRATEGY: {TARGET_STRATEGY.upper()})")
         print("="*50)
 
-        # 1. Histogramas
         processor.plot_comparison_histograms(save_dir=output_dir)
             
-        # 2. Curva de Tendencia de Rendimiento (Líneas continuas)
+        # Ventanas de 60s hasta un máximo de 600s, ideal para el hardware real
         processor.plot_performance_trend(
-            window_sec=500,  
-            max_time_sec=3000,
-            save_path=f"{output_dir}/figure6_performance_trend_cases.png"
+            window_sec=60,
+            max_time_sec=600,
+            save_path=f"{output_dir}/real_figure6_performance_trend.png"
         )
 
-        # 3. Violin plot
         processor.plot_search_time_distribution(
-            max_time_sec=3000,
-            save_path=f"{output_dir}/figure_search_time_cases.png"
+            max_time_sec=600,
+            save_path=f"{output_dir}/real_figure_search_time.png"
         )
 
-        # 4. F-measure Boxplot
         processor.plot_f_measure_boxplot(
-            window_sec=500,  
-            max_time_sec=3000,
-            save_path=f"{output_dir}/figure_f_measure_boxplot_cases.png"
+            window_sec=60,
+            max_time_sec=600,
+            save_path=f"{output_dir}/real_figure_f_measure_boxplot.png"
         )
         
-        # 5. Scatter Plot general unificado
-        spec_plotter = SpecializationScatterPlotter(raw_data)
+        spec_plotter = RealSpecializationScatterPlotter(raw_data)
         spec_plotter.preprocess_data()
-        spec_plotter.plot_figure(save_path=f"{output_dir}/specialization_scatter_cases.png")
+        spec_plotter.plot_figure(save_path=f"{output_dir}/real_specialization_scatter.png")
 
     except Exception as e:
         logger.error(f"Error in main execution: {e}")

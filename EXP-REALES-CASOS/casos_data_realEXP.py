@@ -1,10 +1,10 @@
 """
-Script de Análisis Comparativo Global - SOLER PROJECT
+Script de Análisis Comparativo Global - SOLER PROJECT (REAL ROBOTS)
 Autor: Gabriel Madroñero
 
 Este script itera sobre múltiples directorios (CASO1 a CASO6), extrae los datos 
-exclusivamente del robot 'q0' y genera gráficas de líneas comparativas para 
-evaluar el rendimiento y el F-measure de las distintas configuraciones.
+del enjambre de robots físicos reales y genera gráficas comparativas para 
+evaluar el rendimiento, F-measure y memoria de las distintas configuraciones.
 """
 
 import os
@@ -20,39 +20,40 @@ import matplotlib.ticker as ticker
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# === Parámetros Globales ===
-T_TICKS_PER_SEC = 10.0
-WINDOW_SEC = 1000
-MAX_TIME_SEC = 10000
+# === Parámetros Globales (Adaptados para QUPA Real) ===
+WINDOW_SEC = 60       # Ventana de evaluación sugerida para hardware real
+MAX_TIME_SEC = 600    # Duración máxima del experimento real
 
 # Ruta base donde se encuentran las carpetas CASO1, CASO2, ..., CASO6
-BASE_DIR = Path(r"/home/gmadro/EXP_CASOS")
+BASE_DIR = Path(r"/home/gmadro/EXP_REAL_ROBOTS")
 # Carpeta donde se guardarán las gráficas comparativas
-OUTPUT_DIR = BASE_DIR/"COMPARATIVA_GLOBAL"
+OUTPUT_DIR = BASE_DIR / "COMPARATIVA_GLOBAL"
 
 def load_and_merge_data() -> pd.DataFrame:
     """Recorre las carpetas de los casos, lee los CSV y los combina."""
     all_data = []
     
+    # Asume que tienes de CASO1 a CASO6, ajusta el rango si tienes más o menos
     for i in range(1, 7):
         caso_name = f"CASO{i}"
         csv_path = BASE_DIR / caso_name / "experiment_data.csv"
         
         if csv_path.exists():
-            logger.info(f"Cargando datos de: {caso_name}")
+            logger.info(f"Cargando datos físicos de: {caso_name}")
             try:
                 df = pd.read_csv(csv_path)
                 
-                # ---> FILTRO ESTRICTO: Solo robot q0 <---
-                df = df[df['robot'] == 'q0']
+                # 1. Mapeo de nomenclatura física a lógica
+                if 'task' in df.columns:
+                    df['task'] = df['task'].replace({'TYPE_B': 'BLUE', 'TYPE_R': 'RED'})
                 
                 # Estandarizar la columna strategy
-                if df['greedy'].dtype == object:
+                if 'greedy' in df.columns and df['greedy'].dtype == object:
                     df['greedy'] = df['greedy'].astype(str).str.lower().map({'true': True, 'false': False})
                 df['strategy'] = df['greedy'].map({True: 'greedy', False: 'selective'})
                 
-                # Calcular el tiempo en segundos
-                df['time_sec'] = df['tick'] / T_TICKS_PER_SEC
+                # 2. Asignación directa de tiempo (los logs ya están en segundos)
+                df['time_sec'] = df['tick']
                 
                 # Etiquetar con el caso correspondiente
                 df['caso'] = caso_name
@@ -105,10 +106,10 @@ def plot_comparative_performance(df: pd.DataFrame, save_path: str):
             )
             
             ax.set_title(f"Performance (Acumulado) - {strat.capitalize()} Strategy", fontsize=14, fontweight='bold')
-            ax.set_xlabel("Time (s) [×10³]", fontsize=12)
+            ax.set_xlabel("Time (s)", fontsize=12)
             
-            # ---> SOLUCIÓN EJES X: Formateador nativo para evitar los 0,0,1,1 <---
-            ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x/1000:g}"))
+            # Formateador simple sin notación científica
+            ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x:g}"))
             
             ax.grid(True, linestyle=':', alpha=0.7)
             if i == 0:
@@ -156,10 +157,10 @@ def plot_comparative_f_measure(df: pd.DataFrame, save_path: str):
             )
             
             ax.set_title(f"F-Measure (Specialization) - {strat.capitalize()} Strategy", fontsize=14, fontweight='bold')
-            ax.set_xlabel("Time (s) [×10³]", fontsize=12)
+            ax.set_xlabel("Time (s)", fontsize=12)
             
-            # ---> SOLUCIÓN EJES X <---
-            ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x/1000:g}"))
+            # Formateador simple
+            ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x:g}"))
             
             ax.set_ylim(-0.1, 1.1)
             ax.grid(True, linestyle=':', alpha=0.7)
@@ -187,7 +188,6 @@ def plot_comparative_m_evolution(df: pd.DataFrame, save_path: str):
         strat_data = dff[dff['strategy'] == strat]
         
         if not strat_data.empty:
-            # ---> SOLUCIÓN M: Graficar time_sec directo, sin ventanas, para ver la curva real <---
             sns.lineplot(
                 data=strat_data, x='time_sec', y='m',
                 hue='caso', hue_order=casos_order, palette=palette,
@@ -196,10 +196,10 @@ def plot_comparative_m_evolution(df: pd.DataFrame, save_path: str):
             )
             
             ax.set_title(f"Evolución de Memoria ('m') - {strat.capitalize()} Strategy", fontsize=14, fontweight='bold')
-            ax.set_xlabel("Time (s) [×10³]", fontsize=12)
+            ax.set_xlabel("Time (s)", fontsize=12)
             
-            # ---> SOLUCIÓN EJES X <---
-            ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x/1000:g}"))
+            # Formateador simple
+            ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x:g}"))
             
             ax.axhline(0, color='gray', linestyle='--', alpha=0.5)
             ax.grid(True, linestyle=':', alpha=0.7)
@@ -217,24 +217,22 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     
     try:
-        # Cargar todos los datos
         master_df = load_and_merge_data()
-        logger.info(f"Datos combinados exitosamente. Total de registros (q0): {len(master_df)}")
+        logger.info(f"Datos combinados exitosamente. Total de registros físicos: {len(master_df)}")
         
-        # Generar Gráficas Comparativas
         plot_comparative_performance(
             master_df, 
-            save_path=str(OUTPUT_DIR / "comparativa_performance_lineas.png")
+            save_path=str(OUTPUT_DIR / "real_comparativa_performance_lineas.png")
         )
         
         plot_comparative_f_measure(
             master_df, 
-            save_path=str(OUTPUT_DIR / "comparativa_fmeasure_lineas.png")
+            save_path=str(OUTPUT_DIR / "real_comparativa_fmeasure_lineas.png")
         )
         
         plot_comparative_m_evolution(
             master_df,
-            save_path=str(OUTPUT_DIR / "comparativa_m_evolution_lineas.png")
+            save_path=str(OUTPUT_DIR / "real_comparativa_m_evolution_lineas.png")
         )
         
         logger.info(f"¡Proceso finalizado! Las gráficas están en: {OUTPUT_DIR}")
