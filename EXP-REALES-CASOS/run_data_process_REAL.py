@@ -644,8 +644,8 @@ class SpecializationScatterPlotter:
 # MAIN EXECUTION
 # ------------------------------------------------------------------
 def main():
-    csv_path = r"/home/gmadro/EXP_CASOS/EXP-REALES-CASOS/CASO3/experiment_data.csv"
-    output_dir = r"/home/gmadro/EXP_CASOS/EXP-REALES-CASOS/CASO3/processing_data"
+    csv_path = r"/home/gmadro/EXP_CASOS/EXP-REALES-CASOS/CASO1/experiment_data.csv"
+    output_dir = r"/home/gmadro/EXP_CASOS/EXP-REALES-CASOS/CASO1/processing_data"
     
     try:
         processor = RobotDataProcessor(csv_path, output_dir)

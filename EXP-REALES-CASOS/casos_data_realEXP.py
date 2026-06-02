@@ -34,7 +34,8 @@ def load_and_merge_data() -> pd.DataFrame:
     all_data = []
     
     # Asume que tienes de CASO1 a CASO6, ajusta el rango si tienes más o menos
-    for i in range(1, 7):
+    for i in range(1, 3):
+        i=i+1
         caso_name = f"CASO{i}"
         csv_path = BASE_DIR / caso_name / "experiment_data.csv"
         
