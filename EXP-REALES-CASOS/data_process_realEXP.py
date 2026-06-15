@@ -406,7 +406,7 @@ class RealSpecializationScatterPlotter:
 # ------------------------------------------------------------------
 def main():
     base_dir = r"/home/gmadro/EXP_CASOS/EXP-REALES-CASOS" # Directorio sugerido para aislar datos físicos
-    TARGET_STRATEGY = 'selective'  # Cambia a 'both' (ambas estrategias) 'greedy' o 'selective' según el análisis deseado
+    TARGET_STRATEGY = 'both'  # Cambia a 'both' (ambas estrategias) 'greedy' o 'selective' según el análisis deseado
     
     output_dir = f"/home/gmadro/EXP_CASOS/EXP-REALES-CASOS/processing_data_{TARGET_STRATEGY}"
     Path(output_dir).mkdir(parents=True, exist_ok=True)

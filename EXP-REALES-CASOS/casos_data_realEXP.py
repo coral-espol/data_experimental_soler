@@ -25,7 +25,7 @@ WINDOW_SEC = 60       # Ventana de evaluación sugerida para hardware real
 MAX_TIME_SEC = 600    # Duración máxima del experimento real
 
 # Ruta base donde se encuentran las carpetas CASO1, CASO2, ..., CASO6
-BASE_DIR = Path(r"/home/gmadro/EXP_REAL_ROBOTS")
+BASE_DIR = Path(r"/home/gmadro/EXP_CASOS/EXP-REAL-CASOS")
 # Carpeta donde se guardarán las gráficas comparativas
 OUTPUT_DIR = BASE_DIR / "COMPARATIVA_GLOBAL"
 
