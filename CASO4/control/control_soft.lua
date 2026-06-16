@@ -322,7 +322,7 @@ local evaluation_counter = 0
 local stable_task = "NONE"
 
 local exit_counter = 0
-local EXIT_CONFIRM_T = 3
+local EXIT_CONFIRM_T = 1
 
 function step()
 
@@ -339,7 +339,7 @@ function step()
     -- Giro simétrico puro
     apply_and_return(-4, 4)
 
-    local task = get_ground_task()
+    task = get_ground_task()
 
     if task ~= "NONE" then
       -- Arrancamos la evaluación
@@ -347,15 +347,15 @@ function step()
       stable_task = task
       STATE = "EVALUATE"
     end
-
+    log("---------------------.EXPLORANDO----------------------------- "..robot.id)
   --------------------------------------------------
 
   elseif STATE == "EVALUATE" then
-
+    log("---------------------INICIO ESTADO EVALUATE----------------------------- "..robot.id)
     -- Aplicamos giro simétrico
-    apply_and_return(-4, 4)
+    apply_and_return(0, 0)
 
-    -- ¡CORRECCIÓN! Comentamos la restricción de ocupación para la prueba estática
+    -- Comentamos la restricción de ocupación para la prueba estática
     -- if not patch_is_free() then
     --   STATE = "EXPLORE"
     --   return
@@ -370,7 +370,7 @@ function step()
       return
     end
 
-    -- Arranque rápido: Evaluamos en solo 1 tick (0.1s) en lugar de 3
+    -- Evaluamos en solo 1 tick (0.1s) 
     if evaluation_counter >= 1 then
 
       current_target_type = stable_task
@@ -382,7 +382,9 @@ function step()
       else
         local p = calculate_prob_accept(stable_task)
         p_x = p
-        if robot.random.uniform(0,1) <= p then
+        local rand_val = robot.random.uniform(0,1)
+        log("----- Random value = "..rand_val.. " vs p = "..p.. " -----")
+        if rand_val <= p then -- Generador aleatorio de numeros revizar el azar de la evaluacion
           accept = true
         end
       end
@@ -392,14 +394,13 @@ function step()
       else
         STATE = "EXPLORE"
       end
-
+      log("----- ESTADO = ----"..STATE.. "----- "..robot.id)
     end
 
   --------------------------------------------------
 
   elseif STATE == "ENTER_PATCH" then
-
-    -- ¡CORRECCIÓN! Comentamos la restricción de ocupación
+    log("---------------------INICIO ESTADO ENTER_PATCH----------------------------- "..robot.id)
     -- if not patch_is_free() then
     --   STATE = "EXPLORE"
     --   return
@@ -408,12 +409,12 @@ function step()
     local task = get_ground_task()
 
     if task ~= "NONE" then
-      exit_counter = 0
-      apply_and_return(-4, 4)
-    else
+    --  exit_counter = 0
+    --  apply_and_return(-4, 4)
+    --else
       exit_counter = exit_counter + 1
       if exit_counter >= EXIT_CONFIRM_T then
-        apply_and_return(-4,4)
+        apply_and_return(0,0)
         execute_ticks = calculate_service_time(
           (current_target_type=="RED" and learn_count_g or learn_count_b)
         )
@@ -423,13 +424,14 @@ function step()
 
         STATE = "EXECUTE"
       end
+      log("----- ESTADO ENTER_PATCH - Tiempo de servicio "..planned_wticks.. "-----"..robot.id)
     end
 
   --------------------------------------------------
 
   elseif STATE == "EXECUTE" then
-
-    apply_and_return(-4, 4)
+    log("---------------------INICIO ESTADO EXECUTE----------------------------- "..robot.id)
+    apply_and_return(0, 0)
     
     set_led_color(current_target_type)
     
@@ -477,17 +479,17 @@ function step()
         m = clamp(m - delta, -N_MAX, N_MAX)
       end
 
-      -- ¡CORRECCIÓN VITAL! Damos 30 ticks (3 segundos) de tiempo muerto visible
+      -- Damos 30 ticks 3 segundos de tiempo muerto visible
       cooldown_ticks = 30
       set_led_color("NONE")
       STATE = "COOLDOWN"
     end
   --------------------------------------------------
   elseif STATE == "COOLDOWN" then
-
-    apply_and_return(-4, 4)
+    log("----- ESTADO COOLDOWN -----"..STATE.. "-----" ..robot.id )
+    apply_and_return(0, 0)
     cooldown_ticks = cooldown_ticks - 1
-
+    log("----- TIEMPO MUERTO "..cooldown_ticks.. "-----")
     if cooldown_ticks <= 0 then
       search_ticks = 0
       STATE = "EXPLORE"

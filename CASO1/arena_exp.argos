@@ -1,7 +1,7 @@
 <argos-configuration>
 
   <framework>
-    <experiment length="10000" ticks_per_second="10" random_seed="19228" />
+    <experiment length="10000" ticks_per_second="10" random_seed="92524" />
     <system threads="0" />
   </framework>
 
@@ -67,4 +67,4 @@
     <range_and_bearing id="rab" index="grid" grid_size="1,1,1" />
   </media>
 
-  </argos-configuration>
+</argos-configuration>

@@ -1,7 +1,7 @@
 <argos-configuration>
 
   <framework>
-    <experiment length="10000" ticks_per_second="10" random_seed="19228" />
+    <experiment length="10000" ticks_per_second="10" random_seed="92524" />
     <system threads="0" />
   </framework>
 
@@ -55,7 +55,7 @@
       <body position="-0.152824,0.171179,0" orientation="0,0,0" />
       <controller config="lua" />
     </qupa>
-
+    
     <qupa id="q1">
       <body position="-0.136787,0.446398,0" orientation="0,0,0" />
       <controller config="lua" />
@@ -82,4 +82,4 @@
     <range_and_bearing id="rab" index="grid" grid_size="1,1,1" />
   </media>
 
-    </argos-configuration>
+</argos-configuration>

@@ -1,45 +1,25 @@
 === SUMMARY OF EXPERIMENT SEEDS ===
-Date: Mon May 25 16:57:02 2026
+Date: Tue Jun 16 09:21:32 2026
 -----------------------------------
 Strategy     | Exp #  | Seed      
 -----------------------------------
-selective    | 1      | 12663     
-selective    | 2      | 80013     
-selective    | 3      | 72458     
-selective    | 4      | 91398     
-selective    | 5      | 60427     
-selective    | 6      | 84658     
-selective    | 7      | 55024     
-selective    | 8      | 68754     
-selective    | 9      | 37661     
-selective    | 10     | 91940     
-selective    | 11     | 18154     
-selective    | 12     | 17144     
-selective    | 13     | 65877     
-selective    | 14     | 49304     
-selective    | 15     | 93330     
-selective    | 16     | 11518     
-selective    | 17     | 70784     
-selective    | 18     | 77231     
-selective    | 19     | 96280     
-selective    | 20     | 27387     
-greedy       | 1      | 14790     
-greedy       | 2      | 40177     
-greedy       | 3      | 15555     
-greedy       | 4      | 32706     
-greedy       | 5      | 93497     
-greedy       | 6      | 29549     
-greedy       | 7      | 29210     
-greedy       | 8      | 28260     
-greedy       | 9      | 94483     
-greedy       | 10     | 1174      
-greedy       | 11     | 14101     
-greedy       | 12     | 5160      
-greedy       | 13     | 9267      
-greedy       | 14     | 84929     
-greedy       | 15     | 92652     
-greedy       | 16     | 59445     
-greedy       | 17     | 1611      
-greedy       | 18     | 22304     
-greedy       | 19     | 57235     
-greedy       | 20     | 19228     
+selective    | 1      | 35526     
+selective    | 2      | 66990     
+selective    | 3      | 36764     
+selective    | 4      | 39628     
+selective    | 5      | 10043     
+selective    | 6      | 11282     
+selective    | 7      | 32462     
+selective    | 8      | 42568     
+selective    | 9      | 60765     
+selective    | 10     | 23373     
+greedy       | 1      | 5854      
+greedy       | 2      | 62934     
+greedy       | 3      | 34376     
+greedy       | 4      | 42261     
+greedy       | 5      | 40370     
+greedy       | 6      | 62279     
+greedy       | 7      | 22943     
+greedy       | 8      | 87957     
+greedy       | 9      | 91776     
+greedy       | 10     | 92524     
