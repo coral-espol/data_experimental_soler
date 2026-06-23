@@ -259,11 +259,12 @@ class RobotDataProcessor:
         # Get current tick labels (they are your time_window values)
         labels = [int(t.get_text()) for t in ax.get_xticklabels()]
         # Convert to scientific-style labels
-        new_labels = [f"{int(x/1000)}" if x != 0 else "0" for x in labels]
+        #new_labels = [f"{int(x/1000)}" if x != 0 else "0" for x in labels]
         ticks = ax.get_xticks()
 
         ax.set_xticks(ticks)
-        ax.set_xticklabels(new_labels)
+        #ax.set_xticklabels(new_labels)
+        ax.set_xticklabels([str(int(x)) for x in labels])
 
         for i, box in enumerate(ax.patches):
             # 1. Get the color (RGBA) from actually box
@@ -297,7 +298,7 @@ class RobotDataProcessor:
                 flier_line.set_alpha(0.7)                  # Opacity for visibility
 
         # 5. Finally customize axes and grid to match the paper's style
-        ax.set_xlabel("Time (s) [×10³]", fontsize=12)
+        ax.set_xlabel("Time (s) ", fontsize=12)
         ax.set_ylabel("Number of tasks completed", fontsize=12)
 
         # Axes limits 
@@ -464,12 +465,13 @@ class RobotDataProcessor:
 
         # Get current tick labels (they are your time_window values)
         labels = [int(t.get_text()) for t in ax.get_xticklabels()]
-        new_labels = [f"{int(x/1000)}" if x != 0 else "0" for x in labels]
+        #new_labels = [f"{int(x/1000)}" if x != 0 else "0" for x in labels]
         # Convert to scientific-style labels    
         ticks = ax.get_xticks()
 
         ax.set_xticks(ticks)
-        ax.set_xticklabels(new_labels)
+        #ax.set_xticklabels(new_labels)
+        ax.set_xticklabels([str(int(x)) for x in labels])
 
         # Custom logic to color the outliers based on their respective box color
         # Custom logic to color the outliers AND add a single median dot
@@ -729,8 +731,8 @@ class SpecializationScatterPlotter:
 # ------------------------------------------------------------------
 def main():
     # Update paths to match the new automated setup
-    csv_path = r"/home/gmadro/EXP_CASOS/CASO1/experiment_data.csv"
-    output_dir = r"/home/gmadro/EXP_CASOS/CASO1/processing_data"
+    csv_path = r"/home/gmadro/EXP_CASOS/CASO4/experiment_data.csv"
+    output_dir = r"/home/gmadro/EXP_CASOS/CASO4/processing_data"
     
     try:
         processor = RobotDataProcessor(csv_path, output_dir)
@@ -771,21 +773,21 @@ def main():
 
         # 4. Figure 6 - Performance Boxplot
         processor.plot_performance_boxplot(
-            window_sec=1000,
-            max_time_sec=3000,
+            window_sec=100,
+            max_time_sec=2000,
             save_path=f"{output_dir}/figure6_performance_boxplot.png"
         )
 
         # 5. Time search expend for the task distribution - Violin plot
         processor.plot_search_time_distribution(
-            max_time_sec=3000,
+            max_time_sec=2000,
             save_path=f"{output_dir}/figure_search_time_.png"
         )
 
         # 6. Figure 10 - F-measure Boxplot
         processor.plot_f_measure_boxplot(
-            window_sec=1000,
-            max_time_sec=3000,
+            window_sec=100,
+            max_time_sec=2000,
             save_path=f"{output_dir}/figure_f_measure_boxplot.png"
         )
 

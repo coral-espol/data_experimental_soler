@@ -455,7 +455,7 @@ def main():
             
         # 2. Curva de Tendencia de Rendimiento (Líneas continuas)
         processor.plot_performance_trend(
-            window_sec=100,  
+            window_sec=50,  
             max_time_sec=1000,
             save_path=f"{output_dir}/figure6_performance_trend_cases.png"
         )
@@ -468,7 +468,7 @@ def main():
 
         # 4. F-measure Boxplot
         processor.plot_f_measure_boxplot(
-            window_sec=100,  
+            window_sec=50,  
             max_time_sec=1000,
             save_path=f"{output_dir}/figure_f_measure_boxplot_cases.png"
         )

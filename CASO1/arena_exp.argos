@@ -54,8 +54,8 @@
     <qupa id="q0">
       <body position="-0.152824,0.171179,0" orientation="0,0,0" />
       <controller config="lua" />
-    </qupa>
-
+    </qupa>  
+    
   </arena>
 
   <physics_engines>
@@ -67,4 +67,4 @@
     <range_and_bearing id="rab" index="grid" grid_size="1,1,1" />
   </media>
 
-</argos-configuration>
+  </argos-configuration>

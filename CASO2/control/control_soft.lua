@@ -10,7 +10,7 @@ planned_wticks = 0  -- Tiempo de servicio
 search_ticks = 0    -- Tiempo gastado buscando tarea
 
 -- VARIABLES MODELO APRENDIZAJE
-GAMMA = 1.0 
+GAMMA = 0.2 
 local N_MAX = 12.0
 local W_STD = 60--120.0
 local K_GAIN = 1.15--1.1538--1.25 
@@ -192,6 +192,21 @@ local function count_neighbors_same_task()
   return count
 end
 
+local function count_neighbors_different_task()
+  local count = 0
+  -- Ahora recibe la lista de blobs crudos en lugar de robots agrupados
+  local blobs = get_unique_robots() 
+  for _, res in ipairs(blobs) do
+    if res.dist <= SOCIAL_LEARN_RADIUS_CM and res.color ~= current_target_type then
+      count = count + 1
+    end
+  end
+  if count > 0 then
+      log("----- # BLOBS RETORNO PARA PENALIZACION ="..count.. "-----")
+  end
+  return count
+end
+
 local function patch_is_free()
   local blobs = get_unique_robots()
   local occupied_detected = false
@@ -234,6 +249,7 @@ end
 
 ------------------------ 5. MATEMÁTICAS DEL MODELO ------------------------
 local function calculate_prob_accept(target_type)
+  log("------ Variable m ".. m)
   local p_red = 1.0 / (1.0 + math.exp(-GAMMA * m))
   if target_type == "RED" then return p_red end
   if target_type == "BLUE" then return (1.0 - p_red) end
@@ -382,7 +398,7 @@ function step()
       else
         local p = calculate_prob_accept(stable_task)
         p_x = p
-        local rand_val = robot.random.uniform(0,1)
+        local rand_val = robot.random.uniform(0.0,1)
         log("----- Random value = "..rand_val.. " vs p = "..p.. " -----")
         if rand_val <= p then -- Generador aleatorio de numeros revizar el azar de la evaluacion
           accept = true
@@ -436,6 +452,7 @@ function step()
     set_led_color(current_target_type)
     
     local neighbors = count_neighbors_same_task()
+    local oposite_neighbors = count_neighbors_different_task()
     if neighbors > max_social_seen then
        max_social_seen = neighbors
     end
@@ -450,6 +467,7 @@ function step()
         n_effective = snapshot_count 
       end
       log("[" ..n_effective.. "] calculo de recompensa")
+      log("[" ..oposite_neighbors.. "] calculo de penalizacion")
       
       local reward = 0.0
       if n_effective < 3 then
@@ -461,14 +479,15 @@ function step()
       local delta = reward 
 
       local base_penality = 0.0
-      if n_effective < 2 then
-          base_penality = 1.0 + (1.5 * n_effective)
+      if oposite_neighbors < 2 then
+          base_penality = 1.0 + (1.5 * oposite_neighbors)
       else
           base_penality = 3.7
       end
       
       local penality = CROSS_FORGET * base_penality
 
+      log("Penalizacion= "..penality.." Recompensa= "..delta)
       if current_target_type == "RED" then
         learn_count_g = learn_count_g + delta
         learn_count_b = math.max(0, learn_count_b - penality)
@@ -478,7 +497,7 @@ function step()
         learn_count_g = math.max(0, learn_count_g - penality)
         m = clamp(m - delta, -N_MAX, N_MAX)
       end
-
+      log("contador blue "..learn_count_b.." contador red= "..learn_count_g)
       -- Damos 30 ticks 3 segundos de tiempo muerto visible
       cooldown_ticks = 30
       set_led_color("NONE")
