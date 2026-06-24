@@ -25,7 +25,7 @@ WINDOW_SEC = 60       # Ventana de evaluación sugerida para hardware real
 MAX_TIME_SEC = 600    # Duración máxima del experimento real
 
 # Ruta base donde se encuentran las carpetas CASO1, CASO2, ..., CASO6
-BASE_DIR = Path(r"/home/gmadro/EXP_CASOS/EXP-REAL-CASOS")
+BASE_DIR = Path(r"/home/gmadro/EXP_CASOS/EXP-REALES-CASOS")
 # Carpeta donde se guardarán las gráficas comparativas
 OUTPUT_DIR = BASE_DIR / "COMPARATIVA_GLOBAL"
 
@@ -34,8 +34,8 @@ def load_and_merge_data() -> pd.DataFrame:
     all_data = []
     
     # Asume que tienes de CASO1 a CASO6, ajusta el rango si tienes más o menos
-    for i in range(1, 3):
-        i=i+1
+    for i in range(1, 5):
+        #i=i+1
         caso_name = f"CASO{i}"
         csv_path = BASE_DIR / caso_name / "experiment_data.csv"
         

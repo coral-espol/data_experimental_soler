@@ -455,21 +455,21 @@ def main():
             
         # 2. Curva de Tendencia de Rendimiento (Líneas continuas)
         processor.plot_performance_trend(
-            window_sec=50,  
-            max_time_sec=1000,
+            window_sec=60,  
+            max_time_sec=600,
             save_path=f"{output_dir}/figure6_performance_trend_cases.png"
         )
 
         # 3. Violin plot
         processor.plot_search_time_distribution(
-            max_time_sec=1000,
+            max_time_sec=600,
             save_path=f"{output_dir}/figure_search_time_cases.png"
         )
 
         # 4. F-measure Boxplot
         processor.plot_f_measure_boxplot(
-            window_sec=50,  
-            max_time_sec=1000,
+            window_sec=60,  
+            max_time_sec=600,
             save_path=f"{output_dir}/figure_f_measure_boxplot_cases.png"
         )
         

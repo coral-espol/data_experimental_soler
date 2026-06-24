@@ -34,7 +34,7 @@ def load_and_merge_data() -> pd.DataFrame:
     """Recorre las carpetas de los casos, lee los CSV y los combina."""
     all_data = []
     
-    for i in range(1, 7):
+    for i in range(1, 5):
         caso_name = f"CASO{i}"
         csv_path = BASE_DIR / caso_name / "experiment_data.csv"
         
@@ -69,12 +69,12 @@ def load_and_merge_data() -> pd.DataFrame:
     master_df = pd.concat(all_data, ignore_index=True)
     return master_df
 
-def plot_comparative_performance(df: pd.DataFrame, save_path: str):
+def plot_comparative_performance(df: pd.DataFrame, save_path: str, window_sec: int = 1000,max_time_sec: int = 10000):
     logger.info("Generando gráfica comparativa de Performance...")
     
-    dff = df[(df['time_sec'] >= 0) & (df['time_sec'] <= MAX_TIME_SEC)].copy()
-    dff['time_window'] = (np.ceil(dff['time_sec'] / WINDOW_SEC) * WINDOW_SEC).astype(int)
-    dff = dff[(dff['time_window'] > 0) & (dff['time_window'] <= MAX_TIME_SEC)]
+    dff = df[(df['time_sec'] >= 0) & (df['time_sec'] <= max_time_sec)].copy()
+    dff['time_window'] = (np.ceil(dff['time_sec'] / window_sec) * window_sec).astype(int)
+    dff = dff[(dff['time_window'] > 0) & (dff['time_window'] <= max_time_sec)]
     
     perf = dff.groupby(['caso', 'strategy', 'seed', 'time_window']).size().reset_index(name='tasks_in_window')
     perf['tasks_completed'] = perf.groupby(['caso', 'strategy', 'seed'])['tasks_in_window'].cumsum()
@@ -103,11 +103,11 @@ def plot_comparative_performance(df: pd.DataFrame, save_path: str):
                 marker='o', markersize=5, linewidth=2, estimator=np.median,
                 errorbar=None, ax=ax
             )
-            
+            ax.set_xlim(0, max_time_sec)
             ax.set_title(f"Performance (Acumulado) - {strat.capitalize()} Strategy", fontsize=14, fontweight='bold')
             ax.set_xlabel("Time (s) [×10³]", fontsize=12)
             
-            # ---> SOLUCIÓN EJES X: Formateador nativo para evitar los 0,0,1,1 <---
+            # ejes en notacion cientifica para el eje x
             ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x/1000:g}"))
             
             ax.grid(True, linestyle=':', alpha=0.7)
@@ -121,13 +121,13 @@ def plot_comparative_performance(df: pd.DataFrame, save_path: str):
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.show()
 
-def plot_comparative_f_measure(df: pd.DataFrame, save_path: str):
+def plot_comparative_f_measure(df: pd.DataFrame, save_path: str, window_sec: int = 1000, max_time_sec: int = 10000):
     logger.info("Generando gráfica comparativa de F-Measure...")
     
-    dff = df[(df['time_sec'] >= 0) & (df['time_sec'] <= MAX_TIME_SEC)].copy()
+    dff = df[(df['time_sec'] >= 0) & (df['time_sec'] <= max_time_sec)].copy()
     dff = dff[dff['task'].isin(['BLUE', 'RED'])]
-    dff['time_window'] = (np.ceil(dff['time_sec'] / WINDOW_SEC) * WINDOW_SEC).astype(int)
-    dff = dff[(dff['time_window'] > 0) & (dff['time_window'] <= MAX_TIME_SEC)]
+    dff['time_window'] = (np.ceil(dff['time_sec'] / window_sec) * window_sec).astype(int)
+    dff = dff[(dff['time_window'] > 0) & (dff['time_window'] <= max_time_sec)]
     
     dff = dff.sort_values(by=['caso', 'strategy', 'seed', 'time_window', 'tick'])
     dff['prev_task'] = dff.groupby(['caso', 'strategy', 'seed', 'time_window'])['task'].shift(1)
@@ -154,11 +154,11 @@ def plot_comparative_f_measure(df: pd.DataFrame, save_path: str):
                 marker='s', markersize=8, linewidth=2, estimator=np.median,
                 errorbar=None, ax=ax
             )
-            
+            ax.set_xlim(0, max_time_sec)
             ax.set_title(f"F-Measure (Specialization) - {strat.capitalize()} Strategy", fontsize=14, fontweight='bold')
             ax.set_xlabel("Time (s) [×10³]", fontsize=12)
             
-            # ---> SOLUCIÓN EJES X <---
+            # ejes en notacion cientifica para el eje x
             ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x/1000:g}"))
             
             ax.set_ylim(-0.1, 1.1)
@@ -173,10 +173,10 @@ def plot_comparative_f_measure(df: pd.DataFrame, save_path: str):
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.show()
 
-def plot_comparative_m_evolution(df: pd.DataFrame, save_path: str):
+def plot_comparative_m_evolution(df: pd.DataFrame, save_path: str, window_sec: int = 1000, max_time_sec: int = 10000):
     logger.info("Generando gráfica comparativa de la variable 'm'...")
     
-    dff = df[(df['time_sec'] >= 0) & (df['time_sec'] <= MAX_TIME_SEC)].copy()
+    dff = df[(df['time_sec'] >= 0) & (df['time_sec'] <= max_time_sec)].copy()
     
     fig, axes = plt.subplots(1, 2, figsize=(18, 8), sharey=True)
     casos_order = sorted(dff['caso'].unique())
@@ -187,18 +187,18 @@ def plot_comparative_m_evolution(df: pd.DataFrame, save_path: str):
         strat_data = dff[dff['strategy'] == strat]
         
         if not strat_data.empty:
-            # ---> SOLUCIÓN M: Graficar time_sec directo, sin ventanas, para ver la curva real <---
+            # Graficar time_sec directo, sin ventanas, para ver la curva real 
             sns.lineplot(
                 data=strat_data, x='time_sec', y='m',
                 hue='caso', hue_order=casos_order, palette=palette,
                 marker='o', markersize=4, linewidth=2, estimator=np.mean,
                 errorbar=None, ax=ax
             )
-            
+            ax.set_xlim(0, max_time_sec)
             ax.set_title(f"Evolución de Memoria ('m') - {strat.capitalize()} Strategy", fontsize=14, fontweight='bold')
             ax.set_xlabel("Time (s) [×10³]", fontsize=12)
             
-            # ---> SOLUCIÓN EJES X <---
+            # EJES X 
             ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x/1000:g}"))
             
             ax.axhline(0, color='gray', linestyle='--', alpha=0.5)
@@ -216,6 +216,10 @@ def plot_comparative_m_evolution(df: pd.DataFrame, save_path: str):
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     
+    # Definir el tiempo máximo para las gráficas comparativas
+    WINDOW_SEC = 60
+    MAX_TIME_SEC = 600    
+
     try:
         # Cargar todos los datos
         master_df = load_and_merge_data()
@@ -224,17 +228,23 @@ def main():
         # Generar Gráficas Comparativas
         plot_comparative_performance(
             master_df, 
-            save_path=str(OUTPUT_DIR / "comparativa_performance_lineas.png")
+            save_path=str(OUTPUT_DIR / "comparativa_performance_lineas.png"),
+            window_sec=WINDOW_SEC,
+            max_time_sec=MAX_TIME_SEC
         )
         
         plot_comparative_f_measure(
             master_df, 
-            save_path=str(OUTPUT_DIR / "comparativa_fmeasure_lineas.png")
+            save_path=str(OUTPUT_DIR / "comparativa_fmeasure_lineas.png"),
+            window_sec=WINDOW_SEC,
+            max_time_sec=MAX_TIME_SEC
         )
         
         plot_comparative_m_evolution(
             master_df,
-            save_path=str(OUTPUT_DIR / "comparativa_m_evolution_lineas.png")
+            save_path=str(OUTPUT_DIR / "comparativa_m_evolution_lineas.png"),
+            window_sec=WINDOW_SEC,
+            max_time_sec=MAX_TIME_SEC
         )
         
         logger.info(f"¡Proceso finalizado! Las gráficas están en: {OUTPUT_DIR}")

@@ -731,8 +731,8 @@ class SpecializationScatterPlotter:
 # ------------------------------------------------------------------
 def main():
     # Update paths to match the new automated setup
-    csv_path = r"/home/gmadro/EXP_CASOS/CASO4/experiment_data.csv"
-    output_dir = r"/home/gmadro/EXP_CASOS/CASO4/processing_data"
+    csv_path = r"/home/gmadro/EXP_CASOS/CASO1/experiment_data.csv"
+    output_dir = r"/home/gmadro/EXP_CASOS/CASO1/processing_data"
     
     try:
         processor = RobotDataProcessor(csv_path, output_dir)
@@ -773,21 +773,21 @@ def main():
 
         # 4. Figure 6 - Performance Boxplot
         processor.plot_performance_boxplot(
-            window_sec=100,
-            max_time_sec=2000,
+            window_sec=1000,
+            max_time_sec=10000,
             save_path=f"{output_dir}/figure6_performance_boxplot.png"
         )
 
         # 5. Time search expend for the task distribution - Violin plot
         processor.plot_search_time_distribution(
-            max_time_sec=2000,
+            max_time_sec=10000,
             save_path=f"{output_dir}/figure_search_time_.png"
         )
 
         # 6. Figure 10 - F-measure Boxplot
         processor.plot_f_measure_boxplot(
-            window_sec=100,
-            max_time_sec=2000,
+            window_sec=1000,
+            max_time_sec=10000,
             save_path=f"{output_dir}/figure_f_measure_boxplot.png"
         )
 
