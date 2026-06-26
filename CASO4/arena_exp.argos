@@ -1,7 +1,7 @@
 <argos-configuration>
 
   <framework>
-    <experiment length="10000" ticks_per_second="10" random_seed="35526" />
+    <experiment length="10000" ticks_per_second="10" random_seed="92524" />
     <system threads="0" />
   </framework>
 
@@ -19,7 +19,7 @@
       <params script="/home/gmadro/soler_experiment/control/control_soft.lua" />
     </lua_controller>
   </controllers>
-  <loop_functions library="build/libqupa_learning.so" label="qupa_learning" shuffle="false" shape="circle" pattern="midle" task_size="0.15" greedy="false" /> 
+  <loop_functions library="build/libqupa_learning.so" label="qupa_learning" shuffle="false" shape="circle" pattern="midle" task_size="0.15" greedy="true" /> 
 
   <arena size="3, 3, 1" center="0,0,0.3">
 

@@ -217,7 +217,7 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     
     # Definir el tiempo máximo para las gráficas comparativas
-    WINDOW_SEC = 60
+    WINDOW_SEC = 30
     MAX_TIME_SEC = 600    
 
     try:

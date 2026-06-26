@@ -422,7 +422,7 @@ def main():
     base_dir = r"/home/gmadro/EXP_CASOS" 
     
     # PARÁMETRO DE FILTRO DE ESTRATEGIA ('both', 'greedy', 'selective')
-    TARGET_STRATEGY = 'greedy'  # Cambia a 'greedy' o 'both' según lo que quieras analizar
+    TARGET_STRATEGY = 'both'  # Cambia a 'greedy' o 'both' según lo que quieras analizar
     
     output_dir = f"/home/gmadro/EXP_CASOS/processing_data_{TARGET_STRATEGY}"
     Path(output_dir).mkdir(parents=True, exist_ok=True)
