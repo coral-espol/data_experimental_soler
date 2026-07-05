@@ -120,20 +120,33 @@ class RobotDataProcessor:
 
     def plot_comparison_histograms(self, save_dir: Optional[str] = None) -> None:
         if self.raw_data is None or self.raw_data.empty: return
-        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        # 12x12 Cuadrado perfecto
+        fig, ax = plt.subplots(figsize=(12, 12))
         bins = np.arange(W_MIN_SEC, W_STD_SEC + 6, 6)
         
         sns.histplot(data=self.raw_data, x="w_sec", hue="caso", bins=bins, 
-                     palette=self.palette, element="step", fill=True, alpha=0.3, ax=ax)
+                     palette=self.palette, element="step", fill=True, alpha=0.3, ax=ax, linewidth=2)
         
-        ax.set_xlabel("Task completion time $w_x$ (s)")
+        # ---> SI NECESITAS LÍMITE Y MANUAL, DESCOMENTA ESTA LÍNEA Y CAMBIA EL VALOR <---
+        # ax.set_ylim(0, 1500)
+        
+        ax.set_xlabel("Task completion time $w_x$ (s)", fontsize=20, fontweight='bold', labelpad=15)
+        ax.set_ylabel("Number of tasks completed ($\\times 10^3$)", fontsize=20, fontweight='bold', labelpad=15)
+        ax.set_title("Comparison of Task Completion Times Across Cases", fontsize=24, fontweight='bold', pad=20)
+        
         ax.yaxis.set_major_formatter(FuncFormatter(thousands_formatter))
         ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
-        ax.set_ylabel("Number of tasks completed ($10^3$)")
-        ax.set_title("Comparison of Task Completion Times Across Cases")
-        ax.axvline(W_MIN_SEC, linestyle="--", color='red', alpha=0.7)
-        ax.axvline(W_STD_SEC, linestyle="--", color='blue', alpha=0.7)
-        ax.grid(True, alpha=0.3)
+        
+        ax.tick_params(axis='both', which='major', labelsize=16)
+
+        # Líneas verticales más notorias
+        ax.axvline(W_MIN_SEC, linestyle="--", color='red', alpha=0.8, linewidth=2.5, label='$W_{min}$')
+        ax.axvline(W_STD_SEC, linestyle="--", color='blue', alpha=0.8, linewidth=2.5, label='$W_{std}$')
+        
+        ax.grid(True, axis='y', linestyle='--', alpha=0.6)
+        
+        legend = ax.legend(loc='upper right', fontsize=16, framealpha=0.9, edgecolor='black')
 
         plt.tight_layout()
         if save_dir: plt.savefig(Path(save_dir) / "cases_comparison_histograms.png", dpi=300, bbox_inches='tight')
@@ -159,8 +172,6 @@ class RobotDataProcessor:
         df['experiment_id'] = df.groupby(['caso', 'seed']).ngroup()
         perf = df.groupby(['experiment_id', 'caso', 'time_window']).size().reset_index(name='tasks_completed')
 
-        # Aseguramos que todas las semillas tengan una entrada en todas las ventanas,
-        # asignando 0 tareas si no hicieron ninguna.
         all_windows = np.arange(window_sec, max_time_sec + window_sec, window_sec)
         experiments = df[['experiment_id', 'caso']].drop_duplicates()
         
@@ -172,10 +183,8 @@ class RobotDataProcessor:
         grid = grid.merge(experiments, on='experiment_id')
         perf = grid.merge(perf, on=['experiment_id', 'caso', 'time_window'], how='left')
         
-        # Rellenamos los "huecos" con ceros
         perf['tasks_completed'] = perf['tasks_completed'].fillna(0)
 
-        # Forzar origen en (0,0) para consistencia en el inicio del gráfico
         dummy_data = []
         for exp_id in perf['experiment_id'].unique():
             caso = perf[perf['experiment_id'] == exp_id]['caso'].iloc[0]
@@ -184,7 +193,8 @@ class RobotDataProcessor:
         perf = pd.concat([perf, pd.DataFrame(dummy_data)], ignore_index=True)
         perf = perf.sort_values(by='time_window')
 
-        fig, ax = plt.subplots(figsize=(12, 8))
+        # 12x12 Cuadrado perfecto
+        fig, ax = plt.subplots(figsize=(12, 12))
 
         perf['tasks_completed'] = perf['tasks_completed'].astype(int)
         perf['time_window'] = perf['time_window'].astype(int)
@@ -196,8 +206,8 @@ class RobotDataProcessor:
             hue='caso',
             palette=self.palette,
             marker='o',
-            linewidth=2.5,
-            markersize=6,
+            linewidth=3.5, # Línea más gruesa
+            markersize=10, # Marcadores más grandes
             errorbar='sd',
             ax=ax
         )
@@ -209,12 +219,21 @@ class RobotDataProcessor:
         def time_formatter(x, pos):
             return f"{x/1000:g}" if x != 0 else "0"
         ax.xaxis.set_major_formatter(FuncFormatter(time_formatter))
+        
+        # ---> SI NECESITAS LÍMITE Y MANUAL, MODIFICA ESTA LÍNEA <---
+        ax.set_ylim(0, 10)
 
-        ax.set_ylim(0, global_max_tasks * 1.1)
-        ax.set_xlabel("Time (s) [×10³]", fontsize=12)
-        ax.set_ylabel("Number of tasks completed", fontsize=12)
-        ax.grid(True, linestyle=':', alpha=0.7)
-        ax.legend(title="Experimental Case", fontsize=11, loc='upper left')
+        ax.set_title("Tasks completion over time ", fontsize=24, fontweight='bold', pad=20)
+        ax.set_xlabel("Time (s) [×10³]", fontsize=20, fontweight='bold', labelpad=15)
+        ax.set_ylabel("Number of tasks completed", fontsize=20, fontweight='bold', labelpad=15)
+        
+        ax.tick_params(axis='both', which='major', labelsize=16)
+        
+        ax.grid(True, linestyle='--', alpha=0.6)
+        
+        legend = ax.legend(title="Experimental Case", fontsize=16, loc='upper left', framealpha=0.9, edgecolor='black')
+        legend.get_title().set_fontsize(18)
+        legend.get_title().set_fontweight('bold')
 
         plt.tight_layout()
         if save_path: plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -229,7 +248,8 @@ class RobotDataProcessor:
 
         stats = df.groupby('caso')['search_time_sec'].agg(['mean', 'median', 'std', 'max']).round(2)
 
-        fig, ax = plt.subplots(figsize=(12, 6))
+        # 12x12 Cuadrado perfecto
+        fig, ax = plt.subplots(figsize=(12, 12))
 
         sns.violinplot(
             data=df,
@@ -238,15 +258,20 @@ class RobotDataProcessor:
             palette=self.palette,
             inner='quartile', 
             cut=0,            
-            linewidth=1.2,
+            linewidth=2.5, # Bordes del violín más notorios
             ax=ax,
             hue='caso', 
             legend=False
         )
 
-        ax.set_title("Spent task search time per Case", fontsize=14, fontweight='bold', pad=15)
-        ax.set_ylabel("Search Time (s)", fontsize=12)
-        ax.set_xlabel("Case", fontsize=12)
+        # ---> SI NECESITAS LÍMITE Y MANUAL, DESCOMENTA ESTA LÍNEA Y CAMBIA EL VALOR <---
+        # ax.set_ylim(0, 1000)
+
+        ax.set_title("Spent Task Search Time per Case", fontsize=24, fontweight='bold', pad=20)
+        ax.set_ylabel("Search Time (s)", fontsize=20, fontweight='bold', labelpad=15)
+        ax.set_xlabel("Experimental Case", fontsize=20, fontweight='bold', labelpad=15)
+        
+        ax.tick_params(axis='both', which='major', labelsize=16)
 
         legend_handles = []
         for caso in self.cases:
@@ -254,11 +279,16 @@ class RobotDataProcessor:
                 s_mean = stats.loc[caso, 'mean']
                 s_med = stats.loc[caso, 'median']
                 label_text = f"{caso}\nMean: {s_mean}s\nMedian: {s_med}s"
-                patch = Patch(facecolor=self.palette[caso], edgecolor='black', label=label_text)
+                patch = Patch(facecolor=self.palette[caso], edgecolor='black', linewidth=1.5, label=label_text)
                 legend_handles.append(patch)
 
-        ax.legend(handles=legend_handles, title="Statistics", loc='upper right', fontsize=10)
-        ax.grid(True, axis='y', linestyle=':', alpha=0.7)
+        # labelspacing da espacio para las multilíneas
+        legend = ax.legend(handles=legend_handles, title="Statistics", loc='upper right', 
+                           fontsize=14, labelspacing=1.3, framealpha=0.9, edgecolor='black')
+        legend.get_title().set_fontsize(16)
+        legend.get_title().set_fontweight('bold')
+
+        ax.grid(True, axis='y', linestyle='--', alpha=0.6)
 
         plt.tight_layout()
         if save_path: plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -293,7 +323,8 @@ class RobotDataProcessor:
 
         f_df = robot_stats.groupby(['experiment_id', 'caso', 'time_window'])['f_measure'].mean().reset_index()
 
-        fig, ax = plt.subplots(figsize=(12, 8))
+        # 12x12 Cuadrado perfecto
+        fig, ax = plt.subplots(figsize=(12, 12))
         time_order = [0] + sorted(f_df['time_window'].unique().tolist())
         
         sns.boxplot(
@@ -304,7 +335,7 @@ class RobotDataProcessor:
             order=time_order,
             palette=self.palette,
             width=0.7,
-            fliersize=4,
+            fliersize=6, # Outliers más grandes
             ax=ax
         )
 
@@ -317,9 +348,10 @@ class RobotDataProcessor:
             x_vals = [tw_to_idx[tw] for tw in caso_data['time_window']]
             y_vals = caso_data['f_measure']
             ax.plot(x_vals, y_vals, color=self.palette[caso], marker='o', 
-                    linestyle='-', linewidth=2.5, markersize=6, zorder=10, 
+                    linestyle='-', linewidth=3.5, markersize=10, zorder=10, # Líneas más gruesas
                     label='_nolegend_')
 
+        # Formatting ticks para que mantengan tamaño 16
         labels = [float(t.get_text()) for t in ax.get_xticklabels()]
         n_ticks = len(labels)
         step = max(1, n_ticks // 15)
@@ -331,14 +363,23 @@ class RobotDataProcessor:
             else:
                 new_labels.append("")
 
+        ax.tick_params(axis='both', which='major', labelsize=16)
+        
         ax.set_xticks(ax.get_xticks())
-        ax.set_xticklabels(new_labels, rotation=45 if n_ticks > 15 else 0)
+        ax.set_xticklabels(new_labels, rotation=45 if n_ticks > 15 else 0, fontsize=16)
 
-        ax.set_ylabel("F-measure (Specialization)", fontsize=12)
-        ax.set_xlabel("Time (s) [×10³]", fontsize=12)
+        ax.set_title("F-measure (Task Consistency) Over Time", fontsize=24, fontweight='bold', pad=20)
+        ax.set_ylabel("F-measure (Specialization)", fontsize=20, fontweight='bold', labelpad=15)
+        ax.set_xlabel("Time (s) [×10³]", fontsize=20, fontweight='bold', labelpad=15)
+        
+        # ---> LÍMITE Y: 1.15 da espacio arriba para la leyenda <---
         ax.set_ylim(-0.15, 1.15) 
-        ax.grid(True, axis='y', linestyle=':', alpha=0.7)
-        ax.legend(title="Case", fontsize=11, loc='upper left') 
+        
+        ax.grid(True, axis='y', linestyle='--', alpha=0.6)
+        
+        legend = ax.legend(title="Case", fontsize=16, loc='upper left', framealpha=0.9, edgecolor='black') 
+        legend.get_title().set_fontsize(18)
+        legend.get_title().set_fontweight('bold')
 
         plt.tight_layout()
         if save_path: plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -385,11 +426,14 @@ class SpecializationScatterPlotter:
     def plot_figure(self, save_path: str) -> None:
         if self.robot_stats is None: return
         
-        fig, ax = plt.subplots(figsize=(8, 8))
+        # 12x12 Cuadrado perfecto
+        fig, ax = plt.subplots(figsize=(12, 12))
+        
+        # DARK MODE
         fig.patch.set_facecolor('#2b2b2b')
         ax.set_facecolor('#2b2b2b')
 
-        ax.tick_params(colors='white')
+        ax.tick_params(colors='white', labelsize=16)
         ax.title.set_color('white')
         ax.xaxis.label.set_color('white')
         ax.yaxis.label.set_color('white')
@@ -401,17 +445,31 @@ class SpecializationScatterPlotter:
             if not data.empty:
                 ax.scatter(data['BLUE'], data['RED'], 
                            color=self.palette[caso],
-                           s=40, alpha=0.8, edgecolors='white', linewidth=0.5, label=caso)
+                           s=100, alpha=0.8, edgecolors='white', linewidth=0.8, label=caso) # Puntos grandes
 
-        ax.set_title("Specialization Across All Cases", fontsize=14, fontweight='bold')
-        ax.set_ylabel("Total tasks $\\tau_r$ (Red)", fontsize=12)
-        ax.set_xlabel("Total tasks $\\tau_b$ (Blue)", fontsize=12)
+        ax.set_title("Specialization Across All Cases", fontsize=24, fontweight='bold', pad=20)
+        ax.set_ylabel("Total tasks $\\tau_r$ (Red)", fontsize=20, fontweight='bold', labelpad=15)
+        ax.set_xlabel("Total tasks $\\tau_b$ (Blue)", fontsize=20, fontweight='bold', labelpad=15)
         
-        ax.plot([0, max_val], [0, max_val], color='white', linestyle='--', alpha=0.5, label='Equilibrium')
-        ax.grid(True, linestyle=':', alpha=0.4, color='white')
-        ax.legend(title="Cases", loc="upper left")
+        ax.plot([0, max_val], [0, max_val], color='white', linestyle='--', alpha=0.6, linewidth=2, label='Equilibrium')
+        
+        # ---> SI NECESITAS LÍMITES MANUALES, MODIFICA ESTAS DOS LÍNEAS (deben ser iguales) <---
+        ax.set_xlim(0, max_val)
+        ax.set_ylim(0, max_val)
+        
+        # ASPECT EQUAL para que la diagonal sea perfecta
+        ax.set_aspect('equal', adjustable='box')
+        
+        ax.grid(True, linestyle=':', alpha=0.3, color='white')
+        
+        legend = ax.legend(title="Cases", loc="upper left", fontsize=16, facecolor='#2b2b2b', edgecolor='white', labelcolor='white')
+        legend.get_title().set_fontsize(18)
+        legend.get_title().set_fontweight('bold')
+        legend.get_title().set_color('white')
 
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        # IMPORTANTE: facecolor=fig.get_facecolor() para mantener el fondo oscuro al exportar
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight', facecolor=fig.get_facecolor())
         plt.show()
 
 # ------------------------------------------------------------------
@@ -419,7 +477,7 @@ class SpecializationScatterPlotter:
 # ------------------------------------------------------------------
 def main():
     # UPDATE: Directory containing CASO1, CASO2, etc.
-    base_dir = r"/home/gmadro/EXP_CASOS" 
+    base_dir = r"/home/gmadro/EXP_CASOS"  # Cambia a tu ruta base si es necesario
     
     # PARÁMETRO DE FILTRO DE ESTRATEGIA ('both', 'greedy', 'selective')
     TARGET_STRATEGY = 'both'  # Cambia a 'greedy' o 'both' según lo que quieras analizar

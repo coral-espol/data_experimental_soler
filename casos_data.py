@@ -69,7 +69,7 @@ def load_and_merge_data() -> pd.DataFrame:
     master_df = pd.concat(all_data, ignore_index=True)
     return master_df
 
-def plot_comparative_performance(df: pd.DataFrame, save_path: str, window_sec: int = 1000,max_time_sec: int = 10000):
+def plot_comparative_performance(df: pd.DataFrame, save_path: str, window_sec: int = 1000, max_time_sec: int = 10000):
     logger.info("Generando gráfica comparativa de Performance...")
     
     dff = df[(df['time_sec'] >= 0) & (df['time_sec'] <= max_time_sec)].copy()
@@ -88,7 +88,8 @@ def plot_comparative_performance(df: pd.DataFrame, save_path: str, window_sec: i
     perf = pd.concat([perf, pd.DataFrame(dummy_data)], ignore_index=True)
     perf = perf.sort_values(by=['caso', 'strategy', 'seed', 'time_window'])
     
-    fig, axes = plt.subplots(1, 2, figsize=(18, 8), sharey=True)
+    # 24x12 para mantener la proporción cuadrada 12x12 por subplot
+    fig, axes = plt.subplots(1, 2, figsize=(24, 12), sharey=True)
     casos_order = sorted(perf['caso'].unique())
     palette = sns.color_palette("tab10", n_colors=len(casos_order))
     
@@ -100,22 +101,34 @@ def plot_comparative_performance(df: pd.DataFrame, save_path: str, window_sec: i
             sns.lineplot(
                 data=strat_data, x='time_window', y='tasks_completed',
                 hue='caso', hue_order=casos_order, palette=palette,
-                marker='o', markersize=5, linewidth=2, estimator=np.median,
+                marker='o', markersize=12, linewidth=3.5, estimator=np.median, # Aumentado grosor y marcadores
                 errorbar=None, ax=ax
             )
             ax.set_xlim(0, max_time_sec)
-            ax.set_title(f"Performance (Acumulado) - {strat.capitalize()} Strategy", fontsize=14, fontweight='bold')
-            ax.set_xlabel("Time (s) [×10³]", fontsize=12)
             
-            # ejes en notacion cientifica para el eje x
+            # ---> SI NECESITAS LÍMITE Y MANUAL, DESCOMENTA Y EDITA ESTA LÍNEA <---
+            # ax.set_ylim(0, 1500)
+            
+            # Jerarquía de títulos grandes
+            ax.set_title(f"Performance (Acumulado) - {strat.capitalize()} Strategy", fontsize=24, fontweight='bold', pad=20)
+            ax.set_xlabel("Time (s) [×10³]", fontsize=20, fontweight='bold', labelpad=15)
+            
+            # Ejes en notación científica para el eje x
             ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x/1000:g}"))
             
-            ax.grid(True, linestyle=':', alpha=0.7)
+            # Aumentar tamaño de números en los ejes
+            ax.tick_params(axis='both', which='major', labelsize=16)
+            
+            ax.grid(True, linestyle='--', alpha=0.6)
             if i == 0:
-                ax.set_ylabel("Total Tasks Completed", fontsize=12)
+                ax.set_ylabel("Total Tasks Completed", fontsize=20, fontweight='bold', labelpad=15)
             else:
                 ax.set_ylabel("")
-            ax.legend(title="Configuración", loc='upper left')
+                
+            # Leyenda robusta
+            legend = ax.legend(title="Configuración", loc='upper left', fontsize=16, framealpha=0.9, edgecolor='black')
+            legend.get_title().set_fontsize(18)
+            legend.get_title().set_fontweight('bold')
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -139,7 +152,8 @@ def plot_comparative_f_measure(df: pd.DataFrame, save_path: str, window_sec: int
     
     stats['f_measure'] = np.where(stats['N'] <= 1, 1.0, 1.0 - (2.0 * stats['switches'] / stats['N']))
     
-    fig, axes = plt.subplots(1, 2, figsize=(18, 8), sharey=True)
+    # 24x12
+    fig, axes = plt.subplots(1, 2, figsize=(24, 12), sharey=True)
     casos_order = sorted(stats['caso'].unique())
     palette = sns.color_palette("tab10", n_colors=len(casos_order))
     
@@ -151,23 +165,31 @@ def plot_comparative_f_measure(df: pd.DataFrame, save_path: str, window_sec: int
             sns.lineplot(
                 data=strat_data, x='time_window', y='f_measure',
                 hue='caso', hue_order=casos_order, palette=palette,
-                marker='s', markersize=8, linewidth=2, estimator=np.median,
+                marker='s', markersize=12, linewidth=3.5, estimator=np.median,
                 errorbar=None, ax=ax
             )
             ax.set_xlim(0, max_time_sec)
-            ax.set_title(f"F-Measure (Specialization) - {strat.capitalize()} Strategy", fontsize=14, fontweight='bold')
-            ax.set_xlabel("Time (s) [×10³]", fontsize=12)
             
-            # ejes en notacion cientifica para el eje x
+            # Límite con espacio adicional (1.15) arriba para que la leyenda grande encaje bien
+            ax.set_ylim(-0.1, 1.15)
+            
+            ax.set_title(f"F-Measure (Specialization) - {strat.capitalize()} Strategy", fontsize=24, fontweight='bold', pad=20)
+            ax.set_xlabel("Time (s) [×10³]", fontsize=20, fontweight='bold', labelpad=15)
+            
+            # Ejes en notación científica
             ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x/1000:g}"))
+            ax.tick_params(axis='both', which='major', labelsize=16)
             
-            ax.set_ylim(-0.1, 1.1)
-            ax.grid(True, linestyle=':', alpha=0.7)
+            ax.grid(True, linestyle='--', alpha=0.6)
             if i == 0:
-                ax.set_ylabel("F-Measure (Median)", fontsize=12)
+                ax.set_ylabel("F-Measure (Median)", fontsize=20, fontweight='bold', labelpad=15)
             else:
                 ax.set_ylabel("")
-            ax.legend(title="Configuración", loc='lower right')
+                
+            # Leyenda abajo a la derecha
+            legend = ax.legend(title="Configuración", loc='lower right', fontsize=16, framealpha=0.9, edgecolor='black')
+            legend.get_title().set_fontsize(18)
+            legend.get_title().set_fontweight('bold')
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -178,7 +200,8 @@ def plot_comparative_m_evolution(df: pd.DataFrame, save_path: str, window_sec: i
     
     dff = df[(df['time_sec'] >= 0) & (df['time_sec'] <= max_time_sec)].copy()
     
-    fig, axes = plt.subplots(1, 2, figsize=(18, 8), sharey=True)
+    # 24x12
+    fig, axes = plt.subplots(1, 2, figsize=(24, 12), sharey=True)
     casos_order = sorted(dff['caso'].unique())
     palette = sns.color_palette("tab10", n_colors=len(casos_order))
     
@@ -187,27 +210,35 @@ def plot_comparative_m_evolution(df: pd.DataFrame, save_path: str, window_sec: i
         strat_data = dff[dff['strategy'] == strat]
         
         if not strat_data.empty:
-            # Graficar time_sec directo, sin ventanas, para ver la curva real 
             sns.lineplot(
                 data=strat_data, x='time_sec', y='m',
                 hue='caso', hue_order=casos_order, palette=palette,
-                marker='o', markersize=4, linewidth=2, estimator=np.mean,
+                marker='o', markersize=8, linewidth=3.5, estimator=np.mean, # markersize=8 aquí porque m puede tener muchos puntos
                 errorbar=None, ax=ax
             )
             ax.set_xlim(0, max_time_sec)
-            ax.set_title(f"Evolución de Memoria ('m') - {strat.capitalize()} Strategy", fontsize=14, fontweight='bold')
-            ax.set_xlabel("Time (s) [×10³]", fontsize=12)
             
-            # EJES X 
+            # ---> SI NECESITAS LÍMITE Y MANUAL, DESCOMENTA Y EDITA ESTA LÍNEA <---
+            # ax.set_ylim(-10, 10) 
+            
+            ax.set_title(f"Evolución de Memoria ('m') - {strat.capitalize()} Strategy", fontsize=24, fontweight='bold', pad=20)
+            ax.set_xlabel("Time (s) [×10³]", fontsize=20, fontweight='bold', labelpad=15)
+            
             ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x/1000:g}"))
+            ax.tick_params(axis='both', which='major', labelsize=16)
             
-            ax.axhline(0, color='gray', linestyle='--', alpha=0.5)
-            ax.grid(True, linestyle=':', alpha=0.7)
+            # Línea horizontal en 0 resaltada
+            ax.axhline(0, color='gray', linestyle='--', linewidth=2, alpha=0.8)
+            ax.grid(True, linestyle='--', alpha=0.6)
+            
             if i == 0:
-                ax.set_ylabel("Valor de Memoria 'm' (Promedio)", fontsize=12)
+                ax.set_ylabel("Valor de Memoria 'm' (Promedio)", fontsize=20, fontweight='bold', labelpad=15)
             else:
                 ax.set_ylabel("")
-            ax.legend(title="Configuración", loc='best')
+                
+            legend = ax.legend(title="Configuración", loc='best', fontsize=16, framealpha=0.9, edgecolor='black')
+            legend.get_title().set_fontsize(18)
+            legend.get_title().set_fontweight('bold')
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -217,7 +248,7 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     
     # Definir el tiempo máximo para las gráficas comparativas
-    WINDOW_SEC = 30
+    WINDOW_SEC = 60
     MAX_TIME_SEC = 600    
 
     try:

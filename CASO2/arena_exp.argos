@@ -72,4 +72,4 @@
     <range_and_bearing id="rab" index="grid" grid_size="1,1,1" />
   </media>
 
-    </argos-configuration>
+</argos-configuration>

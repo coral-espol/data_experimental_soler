@@ -39,7 +39,7 @@ local VMAX = 8.0
 local EVALUATION_TIME = 3  -- Ticks para estabilizar lectura de suelo
 
 -- CONFIG GLOBAL
-GREEDY_MODE = true -- Estrategia: true = Greedy, false = Selective
+GREEDY_MODE = false -- Estrategia: true = Greedy, false = Selective
 local CM_PER_POS_UNIT = 100.0
 
 -- Radio de ocupación social (cm)
@@ -466,8 +466,8 @@ function step()
       else
         n_effective = snapshot_count 
       end
-      log("[" ..n_effective.. "] ---------------------- bloobs calculo de recompensa")
-      log("[" ..oposite_neighbors.. "] ---------------------- bloobs calculo de penalizacion")
+      log("[" ..n_effective.. "] calculo de recompensa")
+      log("[" ..oposite_neighbors.. "] calculo de penalizacion")
       
       local reward = 0.0
       if n_effective < 3 then
@@ -480,38 +480,22 @@ function step()
 
       local base_penality = 0.0
       if oposite_neighbors < 2 then
-          base_penality = 1.0 + (0.2 * oposite_neighbors)
+          base_penality = 1.0 + (1.5 * oposite_neighbors)
       else
           base_penality = 3.7
       end
       
       local penality = CROSS_FORGET * base_penality
-      local social_rewar = 0.0 -- penalizacion total contanto los opuestos
+
       log("Penalizacion= "..penality.." Recompensa= "..delta)
-      if oposite_neighbors > 0 then
-        log("----- PENALIZACION POR VECINOS DE TAREA OPUESTA -----")
-        social_rewar = delta-penality
-      else
-        log("----- NO HAY BLOOB OPUESTOS-RECOMPENSA POR VECINOS DE TAREA IGUAL -----")
-        social_rewar = delta
-      end
-      
       if current_target_type == "RED" then
-        learn_count_g = learn_count_g + social_rewar--+ delta
+        learn_count_g = learn_count_g + delta
         learn_count_b = math.max(0, learn_count_b - penality)
         m = clamp(m + delta, -N_MAX, N_MAX)
-        log("************** task red ****************")
-        log("social_rewar= "..social_rewar.." delta= "..delta.." penality= "..penality)
-        log("learn_count_b= "..learn_count_b.." learn_count_g= "..learn_count_g)
-        log("******************************")
       else
-        learn_count_b = learn_count_b + social_rewar--+ delta
+        learn_count_b = learn_count_b + delta
         learn_count_g = math.max(0, learn_count_g - penality)
         m = clamp(m - delta, -N_MAX, N_MAX)
-        log("************** task blue ****************")
-        log("social_rewar= "..social_rewar.." delta= "..delta.." penality= "..penality)
-        log("learn_count_b= "..learn_count_b.." learn_count_g= "..learn_count_g)
-        log("******************************")
       end
       log("contador blue "..learn_count_b.." contador red= "..learn_count_g)
       -- Damos 30 ticks 3 segundos de tiempo muerto visible
