@@ -152,18 +152,27 @@ class RobotDataProcessor:
         if save_dir: plt.savefig(Path(save_dir) / "cases_comparison_histograms.png", dpi=300, bbox_inches='tight')
         plt.show()
 
-    def plot_performance_trend(self, window_sec: int = 300, max_time_sec: int = 10000, save_path: Optional[str] = None) -> None:
+    def plot_performance_trend(self, window_sec: int = 300, max_time_sec: int = 10000, save_path: Optional[str] = None, target_cases: Optional[List[str]] = None) -> None:
         """Generates a continuous line plot showing tasks completed per time window with shaded variance."""
         if self.raw_data is None or self.raw_data.empty: return
         logger.info("Generating performance trend plot for cases")
         
-        df_all = self.raw_data.copy()
+        # ---> FILTRO DE CASOS CONFIGURABLE <---
+        base_df = self.raw_data.copy()
+        if target_cases is not None:
+            base_df = base_df[base_df['caso'].isin(target_cases)]
+            
+        if base_df.empty:
+            logger.warning("No data to plot after filtering by target_cases.")
+            return
+
+        df_all = base_df.copy()
         df_all['time_seconds_full'] = df_all['tick'] / self.ticks_per_sec
         df_all['time_window_full'] = (np.ceil(df_all['time_seconds_full'] / window_sec) * window_sec).astype(int)
         global_max_tasks = df_all.groupby(['caso', 'seed', 'time_window_full']).size().max()
         if pd.isna(global_max_tasks): global_max_tasks = 100
 
-        df = self.raw_data.copy()
+        df = base_df.copy()
 
         df = df[(df['time_seconds'] >= 0) & (df['time_seconds'] <= max_time_sec)]
         df['time_window'] = (np.ceil(df['time_seconds'] / window_sec) * window_sec).astype(int)
@@ -204,10 +213,10 @@ class RobotDataProcessor:
             x='time_window',
             y='tasks_completed',
             hue='caso',
-            palette=self.palette,
+            palette=self.palette, 
             marker='o',
-            linewidth=3.5, # Línea más gruesa
-            markersize=10, # Marcadores más grandes
+            linewidth=3.5, 
+            markersize=10, 
             errorbar='sd',
             ax=ax
         )
@@ -217,15 +226,14 @@ class RobotDataProcessor:
         ax.set_xticks(time_windows[::step])
         
         def time_formatter(x, pos):
-            return f"{x/1000:g}" if x != 0 else "0"
+            return f"{x/1:g}" if x != 0 else "0"
         ax.xaxis.set_major_formatter(FuncFormatter(time_formatter))
         
-        # ---> SI NECESITAS LÍMITE Y MANUAL, MODIFICA ESTA LÍNEA <---
-        ax.set_ylim(0, 10)
+        ax.set_ylim(0, 8)
 
-        ax.set_title("Tasks completion over time ", fontsize=24, fontweight='bold', pad=20)
-        ax.set_xlabel("Time (s) [×10³]", fontsize=20, fontweight='bold', labelpad=15)
-        ax.set_ylabel("Number of tasks completed", fontsize=20, fontweight='bold', labelpad=15)
+        ax.set_title("Tasks completion over time", fontsize=24, fontweight='bold', pad=20)
+        ax.set_xlabel("Time (s)", fontsize=25, fontweight='bold', labelpad=15)
+        ax.set_ylabel("Number of tasks completed", fontsize=25, fontweight='bold', labelpad=15)
         
         ax.tick_params(axis='both', which='major', labelsize=16)
         
@@ -234,6 +242,19 @@ class RobotDataProcessor:
         legend = ax.legend(title="Experimental Case", fontsize=16, loc='upper left', framealpha=0.9, edgecolor='black')
         legend.get_title().set_fontsize(18)
         legend.get_title().set_fontweight('bold')
+
+        # ---> RE-INDEXACIÓN DINÁMICA DE LA LEYENDA <---
+        # 1. Obtenemos los casos que realmente se graficaron y los ordenamos (ej: ['CASO1', 'CASO3', 'CASO4'])
+        plotted_cases = sorted(perf['caso'].unique())
+        
+        # 2. Creamos un diccionario de traducción: {'CASO1': 'CASE 1', 'CASO3': 'CASE 2', 'CASO4': 'CASE 3'}
+        case_mapping = {caso: f"CASE {i+1}" for i, caso in enumerate(plotted_cases)}
+
+        # 3. Aplicamos la traducción a los textos de la leyenda
+        for text in legend.get_texts():
+            current_text = text.get_text()
+            if current_text in case_mapping:
+                text.set_text(case_mapping[current_text])
 
         plt.tight_layout()
         if save_path: plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -268,8 +289,8 @@ class RobotDataProcessor:
         # ax.set_ylim(0, 1000)
 
         ax.set_title("Spent Task Search Time per Case", fontsize=24, fontweight='bold', pad=20)
-        ax.set_ylabel("Search Time (s)", fontsize=20, fontweight='bold', labelpad=15)
-        ax.set_xlabel("Experimental Case", fontsize=20, fontweight='bold', labelpad=15)
+        ax.set_ylabel("Search Time (s)", fontsize=25, fontweight='bold', labelpad=15)
+        ax.set_xlabel("Experimental Case", fontsize=25, fontweight='bold', labelpad=15)
         
         ax.tick_params(axis='both', which='major', labelsize=16)
 
@@ -515,6 +536,7 @@ def main():
         processor.plot_performance_trend(
             window_sec=60,  
             max_time_sec=600,
+            target_cases=['CASO1', 'CASO3', 'CASO4'],  # None para incluir todos los casos
             save_path=f"{output_dir}/figure6_performance_trend_cases.png"
         )
 
